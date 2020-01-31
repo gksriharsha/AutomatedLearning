@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# History files
+.history
+
+#scratchpad files
+*scratch*

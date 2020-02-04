@@ -128,6 +128,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-#History files
-*2020*
+
+# History files
+.history
+
+#scratchpad files
 *scratch*

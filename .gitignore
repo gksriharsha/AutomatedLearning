@@ -134,3 +134,6 @@ dmypy.json
 
 #scratchpad files
 *scratch*
+
+#CSV files
+*.csv

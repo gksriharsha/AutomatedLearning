@@ -4,12 +4,13 @@ import pandas as pd
 import pprint
 import os
 import dask.dataframe as dd
-
+from sklearn.preprocessing import StandardScaler
 
 class Dataset(DataFrame):
     possible_label_headers = ['classes', 'class',
                               'labels', 'label', 'output', 'problems']
 
+    _scaled = False
     def __init__(self, task='Supervised_Classification', data=None, labels=None, *args, **kwargs):
         if(task == 'Supervised_Classification'):
             self._supervised_classification_init(data, labels, *args, **kwargs)
@@ -133,6 +134,10 @@ class Dataset(DataFrame):
             self.data, self.labels, random_state=42)
         #del self.data
         #del self.labels
+    
+"""     def _scale_data(self):
+        if(not self._scaled):
+            self._scale = True """
 
 
 if (__name__ == '__main__'):

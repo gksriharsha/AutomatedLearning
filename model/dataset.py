@@ -26,27 +26,54 @@ class Dataset(DataFrame):
         about_dict = {}
         about_dict['Using Dask'] = 'Yes' if self.use_dask else 'No'
         if(self.use_dask):
-            shape = self.data.compute().shape
-            about_dict['rows'] = shape[0]
-            about_dict['columns'] = shape[1]
-            about_dict['Unique classes'] = len(self.labels.compute().unique())
+            try:
+                shape = self.data.compute().shape
+                about_dict['rows'] = shape[0]
+                about_dict['columns'] = shape[1]
+                about_dict['Unique classes'] = len(self.labels.compute().unique())
+            except AttributeError:
+                shape1 = self.X_train.compute().shape
+                shape2 = self.X_test.compute().shape
+                about_dict['rows'] = shape1[0]+shape2[0]
+                about_dict['columns'] = shape1[1]+shape2[1]
+                about_dict['Unique classes'] = len(self.y_train.compute().unique())
         else:
-            about_dict['rows'] = self.data.shape[0]
-            about_dict['columns'] = self.data.shape[1]
-            about_dict['Unique classes'] = len(self.labels.unique())
-            about_dict['elements'] = self.data.shape[0]*self.data.shape[1]
+            try:
+                about_dict['rows'] = self.data.shape[0]
+                about_dict['columns'] = self.data.shape[1]
+                about_dict['Unique classes'] = len(self.labels.unique())
+                about_dict['elements'] = self.data.shape[0]*self.data.shape[1]
+            except AttributeError:
+                shape1 = self.X_train.shape
+                shape2 = self.X_test.shape
+                about_dict['rows'] = shape1[0]+shape2[0]
+                about_dict['columns'] = shape1[1]+shape2[1]
+                about_dict['Unique classes'] = len(self.y_train.unique())
         return about_dict
 
     def _check_for_classification(self):
         self.preprocesses = []
         if(self.use_dask):
-            if(Dataset.no_of_nans(self.data.compute()) != 0):
-                self.preprocesses.append('NANs')
-        else:
-            if(Dataset.no_of_nans(self.data) != 0):
-                self.preprocesses.append('NANs')
             try:
-                int(self.labels.iloc[0])
+                if(Dataset.no_of_nans(self.data.compute()) != 0):   
+                    self.preprocesses.append('NANs')                
+            except AttributeError:
+                if(Dataset.no_of_nans(self.X_train.compute() != 0)):
+                    self.preprocesses.append('NANs')
+
+
+        else:
+            try:
+                if(Dataset.no_of_nans(self.data) != 0):   
+                    self.preprocesses.append('NANs')                
+            except AttributeError:
+                if(Dataset.no_of_nans(self.X_train != 0)):
+                    self.preprocesses.append('NANs')
+            try:
+                try:
+                    int(self.labels.iloc[0])
+                except AttributeError:
+                    int(self.y_train.iloc[0])
             except:
                 self.preprocesses.append('Non-numeric labels')
 
@@ -132,8 +159,8 @@ class Dataset(DataFrame):
 
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
             self.data, self.labels, random_state=42)
-        #del self.data
-        #del self.labels
+        del self.data
+        del self.labels
     
 """     def _scale_data(self):
         if(not self._scaled):

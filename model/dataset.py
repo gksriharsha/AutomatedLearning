@@ -7,11 +7,9 @@ import dask.dataframe as dd
 from sklearn.preprocessing import StandardScaler
 from random import randint
 from sklearn.neighbors import KNeighborsClassifier  
+from sklearn.impute import KNNImputer
 class Dataset(DataFrame):
-    possible_label_headers = ['classes', 'class',
-                              'labels', 'label', 'output', 'problems']
 
-    
     def __init__(self, task='Supervised_Classification', data=None, labels=None, *args, **kwargs):
         if(task == 'Supervised_Classification'):
             self._supervised_classification_init(data, labels, *args, **kwargs)
@@ -95,7 +93,7 @@ class Dataset(DataFrame):
                 self.labels = dataset.loc[:,list(map(lambda x:True if x.lower() == label_header[0] else False,dataset.columns))]
                 dataset.drop(label_header[0],axis=1)
                 self.data = dataset
-                self.data = self.data.apply(pd.to_numeric,axis=1, args=('coerce',))
+                self.data = self.data.apply(pd.to_numeric,axis=1, args=('coerce',),meta = self.data.dtypes)
                         
 
     def _supervised_classification_init(self, data, labels, *args, **kwargs):
@@ -111,6 +109,8 @@ class Dataset(DataFrame):
         self.use_dask = False
         self.imputed_columns = []
         self._scaled = False
+        self.possible_label_headers = ['classes', 'class',
+                              'labels', 'label', 'output', 'problems']
 
         #global possible_label_headers
 
@@ -184,37 +184,63 @@ class Dataset(DataFrame):
 
     def _impute_data(self,**params):
         self.imputation_method = params.pop('imputation_method')
+        full_dataset = pd.concat([self.data,self.labels],axis=1)
+        def remove_nan_columns(self):
+            #nan_indices = np.argwhere(full_dataset.isnull().values>0)
+            nan_values = np.array(full_dataset.isnull().sum(axis=0))
+            column_numbers = list(np.where(nan_values>0)[0])
+            for i in column_numbers:
+                if(nan_values[i]*100/full_dataset.shape[0] >= 50):
+                    full_dataset.drop(full_dataset.columns[[i]],axis=1,inplace=True)
+            self.labels = full_dataset.iloc[:,-1]
+            self.data = full_dataset.iloc[:,:-1]
+        remove_nan_columns(self)
         self.imputed_columns = self.data.columns[self.data.isnull().any()].tolist()
+        self.nan_indices = np.argwhere(self.data.isnull().values>0)
         if(self.imputation_method == 'mean'):            
             self.data =  self.data.fillna( self.data.mean())
         elif(self.imputation_method == 'median'):
             self.data =  self.data.fillna( self.data.median())
         elif(self.imputation_method == 'KNN'):
-            print(f'{self.imputed_columns} are the columns to be imputed')
-            list_rows = []
-            clf = KNeighborsClassifier()
-            for column in self.imputed_columns:
-                rows = [i for (i,j) in enumerate(list(self.data.isnull().sum(axis=1).values.compute())) if j>0] 
-                list_rows.append(rows)
-            for (i,column) in enumerate(self.imputed_columns):
-                print(f'Imputing for column {column}')
-                unique_values = len(np.unique(self.data.loc[:,column]))
-                if(unique_values < 4):
-                    print('Suggested to use a deep learning solution')
-                rows = self.data.index.isin(list_rows[i])
-                test_data = self.data[rows].drop(column,axis=1)
-                train_data =  self.data[~rows].drop(column,axis=1)
-                #test_labels = self.data[rows].loc[:,column]
-                train_labels = self.data[~rows].loc[:,column]
-                pred = clf.fit(train_data,train_labels).predict(test_data)
-                self.data.iloc[rows,self.data.columns.get_loc(column)] = pred
+            # print(f'{self.imputed_columns} are the columns to be imputed')
+            # list_rows = []            
+            # for column in self.imputed_columns:
+            #     if(self.use_dask):
+            #         rows = [i for (i,j) in enumerate(list(self.data.isnull().sum(axis=1).values.compute())) if j>0] 
+            #     else:
+            #         rows = [i for (i,j) in enumerate(list(self.data.isnull().sum(axis=1).values)) if j>0] 
+            #     list_rows.append(rows)
+            # for (i,column) in enumerate(self.imputed_columns):
+            #     print(f'Imputing for column {column}')
+            #     unique_values = len(np.unique(self.data.loc[:,column]))
+            #     if(unique_values < 4):
+            #         print('Suggested to use a deep learning solution')
+            #     test_rows = list(set([item for sublist in list_rows for item in sublist]))
+            #     train_rows = list(set(range(self.data.shape[0])).difference(set(test_rows)))
+            #     if(self.use_dask):
+            #         from dask_ml.wrappers import ParallelPostFit
+            #         clf = ParallelPostFit(estimator = KNeighborsClassifier())
+            #         test_data_1 = self.data.iloc[test_rows,:]
+            #         test_data = test_data_1.drop(column,axis=1)
+            #         train_data =  self.data.iloc[train_rows,:].compute().drop(column,axis=1)
+            #         train_labels = self.data.iloc[train_rows,:].compute().loc[:,column]
+            #     else:
+            #         clf = KNeighborsClassifier()
+            #         test_data = self.data.iloc[test_rows,:].drop(column,axis=1)
+            #         train_data =  self.data.iloc[train_rows,:].drop(column,axis=1)
+            #         train_labels = self.data.iloc[train_rows,:].loc[:,column]
+            #     pred = clf.fit(train_data,train_labels).predict(test_data)
+            #     self.data.iloc[rows,self.data.columns.get_loc(column)] = pred
+            imputer = KNNImputer(n_neighbors=2, weights="uniform")
+            self.data = imputer.fit_transform(self.data)
 
 
 
 if(__name__ == '__main__'):
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\kc2 (1).csv')
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\hill.csv')
-    dataset = Dataset(path=r'C:\Users\806707\Downloads\higgs.csv')
+    #dataset = Dataset(path=r'C:\Users\806707\Downloads\higgs.csv')
+    dataset = Dataset(path=r'C:\Users\806707\Downloads\arrhythmia.csv')
     #print(dataset())
     print(dataset._impute_data(imputation_method='KNN'))
     print(dataset())

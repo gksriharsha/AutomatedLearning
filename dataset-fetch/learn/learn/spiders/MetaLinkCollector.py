@@ -29,9 +29,7 @@ class dataset_spider(scrapy.Spider):
 		if dataset_spider.Datasets < 2400:
 			dataset_spider.Datasets = dataset_spider.Datasets + 100
 			yield response.follow(next_page,callback = self.parse)
-		else:
-			os.system('scrapy crawl CSV -o ../meta/MetaData.csv')
 
 if(__name__ == '__main__'):
-    #os.chdir(r'Q:\Python Workspace\AutomatedLearning\dataset-fetch\learn\learn')
+    os.chdir(r'Q:\Python Workspace\AutomatedLearning\dataset-fetch\learn\learn')
     os.system('scrapy crawl Datasets -o ../meta/MetaLink.csv')

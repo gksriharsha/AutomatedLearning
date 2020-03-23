@@ -1,7 +1,7 @@
 import scrapy
 from ..items import LearnItem
 import pandas as pd
-
+import uuid,csv
 
 class Dat(scrapy.Spider):
 	name = 'CSV'
@@ -14,10 +14,44 @@ class Dat(scrapy.Spider):
 		super().__init__()
 		
 		self.datasets = pd.read_csv('../meta/Links.csv')
+
+	def detailed_data(self,response):
+
+		id = uuid.uuid4()
+
+		NumberOfProperties = int(response.xpath("//div[@class='tab-pane active']/h3[2]/text()").extract_first() \
+		                         .strip('properties').strip())
+		
+		Metadata = {}
+		Metadata.__setitem__('Id',id)
+		for i in range(NumberOfProperties):
+			key = response.xpath(f'//*[@id="data_overview"]/div[7]/div[{i+1}]/div[1]/a/text()').extract()[1].strip()
+			print(key)
+			value = response.xpath(
+				f"//div[@class='tab-pane active']/div[7]/div[{i+1}]/div[2]/text()").extract_first().strip()
+			print(value)
+			# //*[@id="data_overview"]/div[7]/div[1]/div[1]/a/text()
+			# /html/body/div[4]/div[4]/div/div/div[1]/div[7]/div[1]/div[1]/a/text()
+			
+			# //*[@id="data_overview"]/div[7]/div[6]/div[1]/a/text()
+			Metadata.__setitem__(key, value)
+
+		try:
+			with open('../meta/MetaData.csv','r') as f:
+				pass
+			with open('../meta/MetaData.csv','a') as f:
+				reader = csv.DictWriter(f,fieldnames=Metadata.keys())
+				reader.writerow(Metadata)
+		except:
+			with open('../meta/MetaData.csv','w') as f:
+				writer = csv.writer(f)
+				writer.writerow(Metadata.keys())
+				writer.writerow(Metadata.values())
+		return id
 	
 	def parse(self, response):
 		
-		print(response)
+		#print(response)
 		
 		datasetinfo = LearnItem()
 		
@@ -30,22 +64,7 @@ class Dat(scrapy.Spider):
 		                              "/div[@class='table-responsive']" +
 		                              "/table[@class='table']/tr[1]/td[1]/text()").extract_first().strip('()')
 		
-		NumberOfProperties = int(response.xpath("//div[@class='tab-pane active']/h3[2]/text()").extract_first() \
-		                         .strip('properties').strip())
-		
-		datasetinfo['Metadata'] = {}
-		
-		for i in range(NumberOfProperties):
-			key = response.xpath(f'//*[@id="data_overview"]/div[7]/div[{i+1}]/div[1]/a/text()').extract()[1].strip()
-			print(key)
-			value = response.xpath(
-				f"//div[@class='tab-pane active']/div[7]/div[{i+1}]/div[2]/text()").extract_first().strip()
-			print(value)
-			# //*[@id="data_overview"]/div[7]/div[1]/div[1]/a/text()
-			# /html/body/div[4]/div[4]/div/div/div[1]/div[7]/div[1]/div[1]/a/text()
-			
-			# //*[@id="data_overview"]/div[7]/div[6]/div[1]/a/text()
-			datasetinfo['Metadata'].__setitem__(key, value)
+		datasetinfo['Metadata'] = self.detailed_data(response)
 		
 		datasetinfo['csv_url'] = link
 		
@@ -55,8 +74,7 @@ class Dat(scrapy.Spider):
 		
 		datasetinfo['Label_header'] = label_header
 		
-		number_of_features = int(response.xpath(r'//*[@id="data_overview"]/h3[1]/text()').extract_first().split(' features')[0]
-)
+		number_of_features = int(response.xpath(r'//*[@id="data_overview"]/h3[1]/text()').extract_first().split(' features')[0])
 		
 		datasetinfo['FeatureName'] = []
 		datasetinfo['FeatureType'] = []
@@ -79,3 +97,5 @@ class Dat(scrapy.Spider):
 		
 		for URL in self.datasets.loc[:, 'dataset_url']:
 			yield response.follow(URL, callback=self.parse)
+
+	

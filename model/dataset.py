@@ -8,6 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from random import randint
 from sklearn.neighbors import KNeighborsClassifier  
 from sklearn.impute import KNNImputer
+from csv import DictReader
 class Dataset(DataFrame):
 
     def __init__(self, task='Supervised_Classification', data=None, labels=None, *args, **kwargs):
@@ -24,51 +25,59 @@ class Dataset(DataFrame):
     def __call__(self):
         about_dict = {}
         about_dict['Using Dask'] = 'Yes' if self.use_dask else 'No'
-        
-        if(self.use_dask):
-            try:
-                shape = self.data.compute().shape
-                about_dict['rows'] = shape[0]
-                about_dict['columns'] = shape[1]
-                about_dict['Unique classes'] = len(np.unique(self.labels.compute()))
-                about_dict['Contains NANs'] = 'Yes' if self.data.compute().isnull().sum().sum() != 0 else 'No'
-            except AttributeError:
-                shape1 = self.X_train.compute().shape
-                shape2 = self.X_test.compute().shape
-                about_dict['rows'] = shape1[0]+shape2[0]
-                about_dict['columns'] = shape1[1]+shape2[1]
-                about_dict['Unique classes'] = len(self.y_train.compute().unique())
-                about_dict['Contains NANs'] = 'Yes' if self.data.isnull().sum().sum() != 0 else 'No'
+        if(not(self.meta_id == None)):
+            with open('../dataset-fetch/meta/MetaData.csv') as read_obj:
+                csv_dict_reader = DictReader(read_obj)
+                for row in csv_dict_reader:
+                    print(row)
+
         else:
-            try:
-                about_dict['rows'] = self.data.shape[0]
-                about_dict['columns'] = self.data.shape[1]
-                about_dict['Unique classes'] = len(self.labels.unique())
-                about_dict['elements'] = self.data.shape[0]*self.data.shape[1]
-            except AttributeError:
-                shape1 = self.X_train.shape
-                shape2 = self.X_test.shape
-                about_dict['rows'] = shape1[0]+shape2[0]
-                about_dict['columns'] = shape1[1]+shape2[1]
-                about_dict['Unique classes'] = len(self.y_train.unique())
+            if(self.use_dask):
+                try:
+                    shape = self.data.compute().shape
+                    about_dict['rows'] = shape[0]
+                    about_dict['columns'] = shape[1]
+                    about_dict['Unique classes'] = len(np.unique(self.labels.compute()))
+                    about_dict['Contains NANs'] = 'Yes' if self.data.compute().isnull().sum().sum() != 0 else 'No'
+                except AttributeError:
+                    shape1 = self.X_train.compute().shape
+                    shape2 = self.X_test.compute().shape
+                    about_dict['rows'] = shape1[0]+shape2[0]
+                    about_dict['columns'] = shape1[1]+shape2[1]
+                    about_dict['Unique classes'] = len(self.y_train.compute().unique())
+                    about_dict['Contains NANs'] = 'Yes' if self.data.isnull().sum().sum() != 0 else 'No'
+            else:
+                try:
+                    about_dict['rows'] = self.data.shape[0]
+                    about_dict['columns'] = self.data.shape[1]
+                    about_dict['Unique classes'] = len(self.labels.unique())
+                    about_dict['elements'] = self.data.shape[0]*self.data.shape[1]
+                except AttributeError:
+                    shape1 = self.X_train.shape
+                    shape2 = self.X_test.shape
+                    about_dict['rows'] = shape1[0]+shape2[0]
+                    about_dict['columns'] = shape1[1]+shape2[1]
+                    about_dict['Unique classes'] = len(self.y_train.unique())
         return about_dict
 
     def _check_for_classification(self):
         self.preprocesses = []
-        if(self.use_dask):
-            try:
-                if(Dataset.no_of_nans(self.data.compute()) != 0):   
-                    self.preprocesses.append('NANs')                
-            except AttributeError:
-                if(Dataset.no_of_nans(self.X_train.compute() != 0)):
-                    self.preprocesses.append('NANs')
-        else:
-            try:
-                if(Dataset.no_of_nans(self.data) != 0):   
-                    self.preprocesses.append('NANs')                
-            except AttributeError:
-                if(Dataset.no_of_nans(self.X_train != 0)):
-                    self.preprocesses.append('NANs')
+        def check_nans(self):
+            if(self.use_dask):
+                try:
+                    if(Dataset.no_of_nans(self.data.compute()) != 0):   
+                        self.preprocesses.append('NANs')                
+                except AttributeError:
+                    if(Dataset.no_of_nans(self.X_train.compute() != 0)):
+                        self.preprocesses.append('NANs')
+            else:
+                try:
+                    if(Dataset.no_of_nans(self.data) != 0):   
+                        self.preprocesses.append('NANs')                
+                except AttributeError:
+                    if(Dataset.no_of_nans(self.X_train != 0)):
+                        self.preprocesses.append('NANs')
+        def check_numeric_labels(self):
             try:
                 try:
                     int(self.labels.iloc[0])
@@ -77,8 +86,10 @@ class Dataset(DataFrame):
             except:
                 self.preprocesses.append('Non-numeric labels')
 
-            if(self.preprocesses == []):
-                self.preprocesses.append('All clear')
+        check_nans(self)
+        check_numeric_labels(self)
+        if(self.preprocesses == []):
+            self.preprocesses.append('All clear')
         return self.preprocesses
 
     def _supervised_dask_init(self):
@@ -87,7 +98,6 @@ class Dataset(DataFrame):
         if(self.url_path):
             dataset = dd.read_csv(self.url_path,na_values=['?',"?",'-',"-",'_',"_",'\'?\'','\"?\"'])
         names = [i.lower() for i in dataset.columns]
-        #global possible_label_headers
         if(any(i in names for i in self.possible_label_headers)):
             label_header = list(set(names).intersection(set(self.possible_label_headers)))
             if(len(label_header) == 1):                 
@@ -101,6 +111,7 @@ class Dataset(DataFrame):
         url_path = kwargs.pop('url_path',None)
         data_path = kwargs.pop('data_path', None)
         labels_path = kwargs.pop('labels_path', None)
+        meta_id = kwargs.pop('meta_id',None)
 
         super(Dataset, self).__init__(*args, **kwargs)
 
@@ -111,10 +122,9 @@ class Dataset(DataFrame):
         self.use_dask = False
         self.imputed_columns = []
         self._scaled = False
+        self.meta_id = meta_id
         self.possible_label_headers = ['classes', 'class',
                               'labels', 'label', 'output', 'problems']
-
-        #global possible_label_headers
 
         if (not (path == None)):
             if ('.csv' not in path):
@@ -183,13 +193,6 @@ class Dataset(DataFrame):
                 self.labels = DataFrame(labels)
 
         self.data.replace(to_replace=r"'[?!@#$%&]'|[?!@#$%&]",value=np.nan,regex=True)
-        #self._check_for_classification()
-        #self._scale_data()
-        #self.split()
-
-    @staticmethod
-    def no_of_nans(set_to_be_checked):
-        return set_to_be_checked.isnull().sum().sum()
 
     def split(self):
         if(self.use_dask):
@@ -229,35 +232,6 @@ class Dataset(DataFrame):
         elif(self.imputation_method == 'median'):
             self.data =  self.data.fillna( self.data.median())
         elif(self.imputation_method == 'KNN'):
-            # print(f'{self.imputed_columns} are the columns to be imputed')
-            # list_rows = []            
-            # for column in self.imputed_columns:
-            #     if(self.use_dask):
-            #         rows = [i for (i,j) in enumerate(list(self.data.isnull().sum(axis=1).values.compute())) if j>0] 
-            #     else:
-            #         rows = [i for (i,j) in enumerate(list(self.data.isnull().sum(axis=1).values)) if j>0] 
-            #     list_rows.append(rows)
-            # for (i,column) in enumerate(self.imputed_columns):
-            #     print(f'Imputing for column {column}')
-            #     unique_values = len(np.unique(self.data.loc[:,column]))
-            #     if(unique_values < 4):
-            #         print('Suggested to use a deep learning solution')
-            #     test_rows = list(set([item for sublist in list_rows for item in sublist]))
-            #     train_rows = list(set(range(self.data.shape[0])).difference(set(test_rows)))
-            #     if(self.use_dask):
-            #         from dask_ml.wrappers import ParallelPostFit
-            #         clf = ParallelPostFit(estimator = KNeighborsClassifier())
-            #         test_data_1 = self.data.iloc[test_rows,:]
-            #         test_data = test_data_1.drop(column,axis=1)
-            #         train_data =  self.data.iloc[train_rows,:].compute().drop(column,axis=1)
-            #         train_labels = self.data.iloc[train_rows,:].compute().loc[:,column]
-            #     else:
-            #         clf = KNeighborsClassifier()
-            #         test_data = self.data.iloc[test_rows,:].drop(column,axis=1)
-            #         train_data =  self.data.iloc[train_rows,:].drop(column,axis=1)
-            #         train_labels = self.data.iloc[train_rows,:].loc[:,column]
-            #     pred = clf.fit(train_data,train_labels).predict(test_data)
-            #     self.data.iloc[rows,self.data.columns.get_loc(column)] = pred
             imputer = KNNImputer(n_neighbors=2, weights="uniform")
             self.data = imputer.fit_transform(self.data)
 

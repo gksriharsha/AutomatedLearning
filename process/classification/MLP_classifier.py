@@ -5,11 +5,11 @@ from sklearn.neural_network import MLPClassifier
 from model.dataset import Dataset
 class MLP(Classifier):
     def __init__(self,**kwargs):
-        hidden_layer = kwargs.pop('Hidden_layer_neurons',None)
+        hidden_layer = kwargs.pop('Hidden_layer_neurons',(100,))
         solver = kwargs.pop('solver','lbfgs')
         activation = kwargs.pop('Activation fn','tanh')
         max_iterations = kwargs.pop('Iterations',10000)
-        tolerance = kwargs.pop('Tolerance',None)
+        tolerance = kwargs.pop('Tolerance',1e-4)
         
         super().__init__()
         self.name = 'MLP'

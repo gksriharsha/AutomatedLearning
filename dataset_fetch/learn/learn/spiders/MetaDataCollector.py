@@ -10,10 +10,11 @@ class Dat(scrapy.Spider):
 		'https://www.openml.org/d/31'
 	]
 	
+
 	def __init__(self):
 		super().__init__()
 		
-		self.datasets = pd.read_csv('../meta/Links.csv')
+		self.datasets = pd.read_csv('dataset_fetch/meta/Links.csv')
 
 	def detailed_data(self,response):
 
@@ -37,13 +38,13 @@ class Dat(scrapy.Spider):
 			Metadata.__setitem__(key, value)
 
 		try:
-			with open('../meta/MetaData.csv','r') as f:
+			with open('dataset_fetch/meta/MetaData.csv','r') as f:
 				pass
-			with open('../meta/MetaData.csv','a') as f:
+			with open('dataset_fetch/meta/MetaData.csv','a') as f:
 				reader = csv.DictWriter(f,fieldnames=Metadata.keys())
 				reader.writerow(Metadata)
 		except:
-			with open('../meta/MetaData.csv','w') as f:
+			with open('dataset_fetch/meta/MetaData.csv','w') as f:
 				writer = csv.writer(f)
 				writer.writerow(Metadata.keys())
 				writer.writerow(Metadata.values())

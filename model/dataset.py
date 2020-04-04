@@ -9,6 +9,8 @@ from random import randint
 from sklearn.neighbors import KNeighborsClassifier  
 from sklearn.impute import KNNImputer
 from csv import DictReader
+from ttictoc import TicToc
+from sklearn import preprocessing
 class Dataset(DataFrame):
 
     def __init__(self, task='Supervised_Classification', data=None, labels=None, *args, **kwargs):
@@ -26,10 +28,18 @@ class Dataset(DataFrame):
         about_dict = {}
         about_dict['Using Dask'] = 'Yes' if self.use_dask else 'No'
         if(not(self.meta_id == None)):
-            with open('../dataset-fetch/meta/MetaData.csv') as read_obj:
+            MetaData_line = {}
+            with open('dataset_fetch/meta/MetaData.csv','r') as read_obj:
                 csv_dict_reader = DictReader(read_obj)
                 for row in csv_dict_reader:
-                    print(row)
+                    if(row['Id'] == self.meta_id):
+                        MetaData_line = row
+                        break
+                about_dict['rows'] = int(MetaData_line['NumberOfInstances'])
+                about_dict['columns'] = int(MetaData_line['NumberOfFeatures'])
+                about_dict['Unique classes'] = int(MetaData_line['NumberOfClasses'])
+                about_dict['Contains NANs'] = int(MetaData_line['NumberOfMissingValues'])
+                about_dict['elements'] = int(MetaData_line['NumberOfInstances'])*int(MetaData_line['NumberOfFeatures'])
 
         else:
             if(self.use_dask):
@@ -38,6 +48,7 @@ class Dataset(DataFrame):
                     about_dict['rows'] = shape[0]
                     about_dict['columns'] = shape[1]
                     about_dict['Unique classes'] = len(np.unique(self.labels.compute()))
+                    about_dict['elements'] = shape[0]*shape[1]
                     about_dict['Contains NANs'] = 'Yes' if self.data.compute().isnull().sum().sum() != 0 else 'No'
                 except AttributeError:
                     shape1 = self.X_train.compute().shape
@@ -45,18 +56,20 @@ class Dataset(DataFrame):
                     about_dict['rows'] = shape1[0]+shape2[0]
                     about_dict['columns'] = shape1[1]+shape2[1]
                     about_dict['Unique classes'] = len(self.y_train.compute().unique())
+                    about_dict['elements'] = shape1[0]*shape1[1] + shape2[0]*shape2[1]
                     about_dict['Contains NANs'] = 'Yes' if self.data.isnull().sum().sum() != 0 else 'No'
             else:
                 try:
                     about_dict['rows'] = self.data.shape[0]
                     about_dict['columns'] = self.data.shape[1]
-                    about_dict['Unique classes'] = len(self.labels.unique())
+                    about_dict['Unique classes'] = len(np.unique(self.labels))
                     about_dict['elements'] = self.data.shape[0]*self.data.shape[1]
                 except AttributeError:
                     shape1 = self.X_train.shape
                     shape2 = self.X_test.shape
                     about_dict['rows'] = shape1[0]+shape2[0]
                     about_dict['columns'] = shape1[1]+shape2[1]
+                    about_dict['elements'] = self.data.shape[0]*self.data.shape[1]
                     about_dict['Unique classes'] = len(self.y_train.unique())
         return about_dict
 
@@ -97,14 +110,27 @@ class Dataset(DataFrame):
             dataset = dd.read_csv(self.path,na_values=['?',"?",'-',"-",'_',"_",'\'?\'','\"?\"'])
         if(self.url_path):
             dataset = dd.read_csv(self.url_path,na_values=['?',"?",'-',"-",'_',"_",'\'?\'','\"?\"'])
-        names = [i.lower() for i in dataset.columns]
-        if(any(i in names for i in self.possible_label_headers)):
-            label_header = list(set(names).intersection(set(self.possible_label_headers)))
-            if(len(label_header) == 1):                 
-                self.labels = dataset.loc[:,list(map(lambda x:True if x.lower() == label_header[0] else False,dataset.columns))]
-                dataset.drop(label_header[0],axis=1)
-                self.data = dataset
-                self.data = self.data.apply(pd.to_numeric,axis=1, args=('coerce',),meta = self.data.dtypes)
+        if(not(self.meta_id == None)):
+            MetaData_line = {}
+            with open('dataset_fetch/meta/Data.csv','r') as read_obj:
+                csv_dict_reader = DictReader(read_obj)
+                for row in csv_dict_reader:
+                    if(row['Metadata'] == self.meta_id):
+                        MetaData_line = row
+                        break
+            Labels_name = MetaData_line['Label_header'].strip()
+            self.labels = dataset.loc[:,Labels_name]
+            dataset = dataset.drop(columns = Labels_name,axis=1)
+            self.data = dataset
+        else:
+            names = [i.lower() for i in dataset.columns]
+            if(any(i in names for i in self.possible_label_headers)):
+                label_header = list(set(names).intersection(set(self.possible_label_headers)))
+                if(len(label_header) == 1):                 
+                    self.labels = dataset.loc[:,list(map(lambda x:True if x.lower() == label_header[0] else False,dataset.columns))]
+                    dataset.drop(label_header[0],axis=1)
+                    self.data = dataset
+                    self.data = self.data.apply(pd.to_numeric,axis=1, args=('coerce',),meta = self.data.dtypes)
 
     def _supervised_classification_init(self, data, labels, *args, **kwargs):
         path = kwargs.pop('path', None)
@@ -122,6 +148,7 @@ class Dataset(DataFrame):
         self.use_dask = False
         self.imputed_columns = []
         self._scaled = False
+        self._split = False
         self.meta_id = meta_id
         self.possible_label_headers = ['classes', 'class',
                               'labels', 'label', 'output', 'problems']
@@ -133,16 +160,30 @@ class Dataset(DataFrame):
                 file_size = os.stat(path).st_size/(1024*1024)
                 if(file_size < 3):
                     dataset = pd.read_csv(path,na_values=['?',"?",'-',"-",'_',"_",'\'?\'','\"?\"'])
-                    names = [i.lower() for i in dataset.columns]
-                    if(any(i in names for i in self.possible_label_headers)):
-                        label_header = list(set(names).intersection(set(self.possible_label_headers)))
-                        if(len(label_header) == 1):                 
-                            self.labels = dataset.loc[:,list(map(lambda x:True if x.lower() == label_header[0] else False,dataset.columns))]
-                            dataset.drop(label_header[0],axis=1)
-                            self.data = dataset
-                            self.data = self.data.apply(pd.to_numeric,axis=1, args=('coerce',),meta = self.data.dtypes)
+                    if(not(self.meta_id == None)):
+                        MetaData_line = {}
+                        with open('dataset_fetch/meta/Data.csv','r') as read_obj:
+                            csv_dict_reader = DictReader(read_obj)
+                            for row in csv_dict_reader:
+                                if(row['Metadata'] == self.meta_id):
+                                    MetaData_line = row
+                                    break
+                        Labels_name = MetaData_line['Label_header'].strip()
+                        self.labels = dataset.loc[:,Labels_name]
+                        dataset = dataset.drop(columns = Labels_name,axis=1)
+                        self.data = dataset
+                        self.meta_id = meta_id
                     else:
-                        print('Labels are not found in the path')
+                        names = [i.lower() for i in dataset.columns]
+                        if(any(i in names for i in self.possible_label_headers)):
+                            label_header = list(set(names).intersection(set(self.possible_label_headers)))
+                            if(len(label_header) == 1):                 
+                                self.labels = dataset.loc[:,list(map(lambda x:True if x.lower() == label_header[0] else False,dataset.columns))]
+                                dataset.drop(label_header[0],axis=1)
+                                self.data = dataset
+                                self.data = self.data.apply(pd.to_numeric,axis=1, args=('coerce',))
+                        else:
+                            print('Labels are not found in the path')
                 else:
                     self.use_dask = True
                     self._supervised_dask_init()
@@ -168,17 +209,31 @@ class Dataset(DataFrame):
                 downloaded_csv = dd.read_csv(url_path,na_values=['?',"?",'-',"-",'_',"_",'\'?\'','\"?\"'])
                 file_size = downloaded_csv.memory_usage().sum().compute()/(1024*1024)
                 if(file_size < 3):
-                    dataset = downloaded_csv.compute()                    
-                    names = [i.lower() for i in dataset.columns]
-                    if(any(i in names for i in self.possible_label_headers)):
-                        label_header = list(set(names).intersection(set(self.possible_label_headers)))
-                        if(len(label_header) == 1):                 
-                            self.labels = dataset.loc[:,list(map(lambda x:True if x.lower() == label_header[0] else False,dataset.columns))]
-                            dataset.drop(label_header[0],axis=1)
-                            self.data = dataset
-                            self.data = self.data.apply(pd.to_numeric,axis=1, args=('coerce',),meta = self.data.dtypes)
-                    else:
-                        print('Labels are not found in the path')
+                    dataset = downloaded_csv.compute()
+                    if(not(self.meta_id == None)):
+                        MetaData_line = {}
+                        with open('dataset_fetch/meta/Data.csv','r') as read_obj:
+                            csv_dict_reader = DictReader(read_obj)
+                            for row in csv_dict_reader:
+                                if(row['Metadata'] == self.meta_id):
+                                    MetaData_line = row
+                                    break
+                        Labels_name = MetaData_line['Label_header'].strip()
+                        self.labels = dataset.loc[:,Labels_name]
+                        dataset = dataset.drop(columns = Labels_name,axis=1)
+                        self.data = dataset
+                        self.meta_id = meta_id
+                    else:                 
+                        names = [i.lower() for i in dataset.columns]
+                        if(any(i in names for i in self.possible_label_headers)):
+                            label_header = list(set(names).intersection(set(self.possible_label_headers)))
+                            if(len(label_header) == 1):                 
+                                self.labels = dataset.loc[:,list(map(lambda x:True if x.lower() == label_header[0] else False,dataset.columns))]
+                                dataset.drop(label_header[0],axis=1)
+                                self.data = dataset
+                                #self.data = self.data.apply(pd.to_numeric,axis=1, args=('coerce',),meta = self.data.dtypes)
+                        else:
+                            print('Labels are not found in the path')
                 else:
                     self.use_dask = True
                     self._supervised_dask_init()
@@ -192,7 +247,7 @@ class Dataset(DataFrame):
             else:
                 self.labels = DataFrame(labels)
 
-        self.data.replace(to_replace=r"'[?!@#$%&]'|[?!@#$%&]",value=np.nan,regex=True)
+        #self.data.replace(to_replace=r"'[?!@#$%&]'|[?!@#$%&]",value=np.nan,regex=True)
 
     def split(self):
         if(self.use_dask):
@@ -204,7 +259,15 @@ class Dataset(DataFrame):
             self.data, self.labels, random_state=42)
         del self.data
         del self.labels
+        self._split = True
     
+    def contains_text_check(self):
+        dataset = self.data
+        textcolumns = dataset.applymap(np.isreal)
+        if(textcolumns.sum().sum() > 0 ):
+            return True
+        else:
+            return False
 
     def _scale_data(self):
         if(not self._scaled):
@@ -235,16 +298,36 @@ class Dataset(DataFrame):
             imputer = KNNImputer(n_neighbors=2, weights="uniform")
             self.data = imputer.fit_transform(self.data)
 
-
-
+    def encode(self):
+        if(not(self.meta_id == None)):
+            #MetaData_line = {}
+            with open('dataset_fetch/meta/Data.csv','r') as read_obj:
+                csv_dict_reader = DictReader(read_obj)
+                for row in csv_dict_reader:
+                    if(row['Metadata'] == self.meta_id):
+                        MetaData_line = row
+                        break
+                #Column_info = MetaData_line['FeatureType'].split(',')
+                self.data = pd.get_dummies(self.data)
+                le = preprocessing.LabelEncoder()
+                self.labels = le.fit_transform(self.labels)
+                #print(len(self.labels))
 if(__name__ == '__main__'):
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\kc2 (1).csv')
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\hill.csv')
-    dataset = Dataset(path=r'C:\Users\806707\Downloads\higgs.csv')
+    t = TicToc()
+    t.tic()
+    dataset = Dataset(url_path=r'https://www.openml.org/data/get_csv/31/dataset_31_credit-g.arff',meta_id ='c3d0a210-6f55-4b89-8a38-6e3404653c78')
+    t.toc()
+    print(t.elapsed)
+    #dataset = Dataset(url_path=r'https://www.openml.org/data/get_csv/31/dataset_31_credit-g.arff')
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\arrhythmia.csv')
     #print(dataset())
-    print(dataset._impute_data(imputation_method='KNN'))
-    print(dataset())
+    #print(dataset._impute_data(imputation_method='KNN'))
+    #print(dataset())
+    print(dataset.encode())
+    print(dataset.data)
+    print(dataset.labels)
     #print(dataset._check_for_classification())
     """ (a,b,c,d) = dataset.train_test_split()
     print(a.shape)

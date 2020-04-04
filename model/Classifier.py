@@ -8,18 +8,20 @@ import csv
 import uuid
 from pathlib import Path
 import os
+import sys
+
+sys.path.append(r'V:\Python\AutomatedLearning')
 class Classifier():
     _time = 0
     
     def __init__(self):
-        path = Path(__file__)
         try:
-            f = open(os.path.join(path.parent.parent,'results','results.csv'),'r',newline='')
+            f = open('results/results.csv','r',newline='')
             f.close()
         except:           
             row = ['UUID','Dask Used','Classifier','Rows','Columns','Classes','Accuracy','F1 Score','Precision','Recall','time']
-            with open(os.path.join(path.parent.parent,'results','results.csv'),'w',newline='') as file:
-                writer = csv.writer(file)
+            with open('results/results.csv','w+',newline='') as f:
+                writer = csv.writer(f)
                 writer.writerow(row)
     
     class time_watch(object):
@@ -59,22 +61,21 @@ class Classifier():
     def save_results(self,dataset,classifier_model):    
         name = classifier_model.name
         info = dataset()
-        id = uuid.uuid4()
+        id = dataset.meta_id
         row = [str(id),str(dataset.use_dask),name,info['rows'],info['columns'],info['Unique classes']]+list(self.results.values())+[self._time]   
-        path = Path(__file__)
-        with open(os.path.join(path.parent.parent,'results','results.csv'),'a',newline='') as file:
+        with open('results/results.csv','a',newline='') as file:
             writer = csv.writer(file)
             writer.writerow(row)
         
         try:            
-            with open(os.path.join(path.parent.parent,'results',f'{name}.csv'),'r',newline='') as file:
+            with open(f'results/{name}.csv','r',newline='') as file:
                 pass
-            with open(os.path.join(path.parent.parent,'results',f'{name}.csv'),'a',newline='') as file:
+            with open(f'results/{name}.csv','a',newline='') as file:
                 writer = csv.writer(file)
                 row = [id]+list(classifier_model.hyperparameters.values())
                 writer.writerow(row)
         except:
-            with open(os.path.join(path.parent.parent,'results',f'{name}.csv'),'w',newline='') as file:
+            with open(f'results/{name}.csv','w',newline='') as file:
                 writer = csv.writer(file)   
                 row = ['UUID']+list(classifier_model.hyperparameters.keys())             
                 writer.writerow(row)

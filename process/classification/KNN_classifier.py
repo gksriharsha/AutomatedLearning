@@ -1,19 +1,22 @@
 import sys,os
 sys.path.append('C:\\Users\\806707\\Documents\\Python\\AutomatedLearning')
-from sklearn.ensemble import AdaBoostClassifier
 from model.Classifier import Classifier
+from sklearn.neighbors import KNeighborsClassifier  
 from model.dataset import Dataset
-
-class ABC(Classifier):
+class KNN(Classifier):
     def __init__(self,**kwargs):
-        
+        K = kwargs.pop('K',5)
+        weights = kwargs.pop('weights','uniform')
         super().__init__()
-        self.name = 'ABC'
+        self.name = 'KNN'
         self.hyperparameters = {}
-        self.clf = GaussianNB()
+        self.hyperparameters['K'] = K
+        self.hyperparameters['weights'] = weights
+        KNeighborsClassifier()
+        self.clf = KNeighborsClassifier(n_neighbors=K,weights=weights)
     
     def __str__(self):
-        return 'ABC'
+        return 'KNN'
 
     
     def train(self,dataset):        
@@ -27,7 +30,7 @@ class ABC(Classifier):
     
 
 if(__name__ == '__main__'):
-    clf = ABC()
+    clf = KNN(K=3)
     dat = Dataset(path=r'C:\Users\806707\Downloads\hill.csv')
     print('Training')
     clf.train(dat)

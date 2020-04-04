@@ -7,6 +7,10 @@
 
 from scrapy.item import Item, Field
 
+class SourceLinkItem(Item):
+    Filename = Field()
+    dataset_url = Field()
+
 
 class LearnItem(Item):
     # define the fields for your item here like:

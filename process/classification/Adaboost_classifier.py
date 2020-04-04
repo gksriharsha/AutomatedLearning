@@ -1,26 +1,19 @@
 import sys,os
 sys.path.append('C:\\Users\\806707\\Documents\\Python\\AutomatedLearning')
-from sklearn.svm import SVC
+from sklearn.ensemble import AdaBoostClassifier
 from model.Classifier import Classifier
 from model.dataset import Dataset
 
-class SVM(Classifier):
+class ABC(Classifier):
     def __init__(self,**kwargs):
-        C = kwargs.pop('C',1)
-        kernel = kwargs.pop('kernel', 'rbf')
-        degree = kwargs.pop('degree',3)
-        tolerance = kwargs.pop('Tolerance',0.0001)
+        
         super().__init__()
-        self.name = 'SVM'
+        self.name = 'ABC'
         self.hyperparameters = {}
-        self.hyperparameters['C'] = C
-        self.hyperparameters['Kernel'] = kernel
-        self.hyperparameters['Degree'] = degree
-        self.hyperparameters['Tolerance'] = tolerance
-        self.clf = SVC(tol=tolerance,C=C,degree=degree,kernel=kernel,gamma='auto')
+        self.clf = AdaBoostClassifier()
     
     def __str__(self):
-        return 'SVM'
+        return 'ABC'
 
     
     def train(self,dataset):        
@@ -34,7 +27,7 @@ class SVM(Classifier):
     
 
 if(__name__ == '__main__'):
-    clf = SVM(C=3)
+    clf = ABC()
     dat = Dataset(path=r'C:\Users\806707\Downloads\hill.csv')
     print('Training')
     clf.train(dat)

@@ -1,21 +1,26 @@
 import sys,os
 sys.path.append('C:\\Users\\806707\\Documents\\Python\\AutomatedLearning')
+from sklearn.svm import SVC
 from model.Classifier import Classifier
-from sklearn.neighbors import KNeighborsClassifier  
 from model.dataset import Dataset
-class KNN(Classifier):
+
+class SVM(Classifier):
     def __init__(self,**kwargs):
-        K = kwargs.pop('K',None)
-        weights = kwargs.pop('weights',None)
+        C = kwargs.pop('C',1)
+        kernel = kwargs.pop('Kernel', 'rbf')
+        degree = kwargs.pop('Degree',3)
+        tolerance = kwargs.pop('Tolerance',0.0001)
         super().__init__()
-        self.name = 'KNN'
+        self.name = 'SVM'
         self.hyperparameters = {}
-        self.hyperparameters['K'] = K
-        self.hyperparameters['weights'] = weights
-        self.clf = KNeighborsClassifier(n_neighbors=K,weights=weights)
+        self.hyperparameters['C'] = C
+        self.hyperparameters['Kernel'] = kernel
+        self.hyperparameters['Degree'] = degree
+        self.hyperparameters['Tolerance'] = tolerance
+        self.clf = SVC(tol=tolerance,C=C,degree=degree,kernel=kernel,gamma='auto')
     
     def __str__(self):
-        return 'KNN'
+        return 'SVM'
 
     
     def train(self,dataset):        
@@ -29,7 +34,7 @@ class KNN(Classifier):
     
 
 if(__name__ == '__main__'):
-    clf = KNN(K=3)
+    clf = SVM(C=3)
     dat = Dataset(path=r'C:\Users\806707\Downloads\hill.csv')
     print('Training')
     clf.train(dat)

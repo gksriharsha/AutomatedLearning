@@ -45,14 +45,47 @@ def change_hyperparameters(combinations,number):
    
         
 def exec():
-    #fetch(100)
+    
     global set_inputs
+    started = False
+    progress_data = []
+    subprogress_data = []
+    partial_progress = 0
+    try:
+        with open('progress.csv','r') as f:
+            progress_data = [line.rstrip() for line in f]
+        started = True
+    except:
+        f = open('progress.csv','w+')
+        f.close()
+        started = False
+    
+    try:
+        with open('sub_progress.csv','r') as f:
+            subprogress_data = [line.rstrip() for line in f]
+    except:
+        f = open('sub_progress.csv','w+')
+        f.close()
+
+    try:
+        with open('partial_progress.csv','r') as f:
+            partial_progress = len([line.rstrip() for line in f])
+    except:
+        f = open('partial_progress.csv','w+')
+        f.close()
+
+    #fetch(100)
     Meta_data = {}
     i = 0
     with open('dataset_fetch/meta/Data.csv') as f:
         Reader = DictReader(f)
         for row in Reader:
+            if((started) and (row['Metadata'] in progress_data)) :
+                i = i+1
+                continue
+
             print(row['Metadata']+'  '+ str(i))
+            
             if i >=5:
                 break
             else:
@@ -115,9 +148,9 @@ def exec():
                 },
                 SVM:
                 {
-                    'C':list(range(1,100,10)),
-                    'Kernel':['rbf','linear'],
-                    'Degree':list(range(3,9)),
+                    'C':list(range(1,50,10)),
+                    #'Kernel':['rbf','linear'],
+                    #'Degree':list(range(3,9)),
                     #'Tolerance':[1e-4,1e-3]
                 },
                 RF:
@@ -125,14 +158,19 @@ def exec():
                     'Trees':list(range(100,500,100)),
                     #'max_depth':None
                 }
-            }
-            
-            for clf in clf_list.items(): 
+            } 
+            for clf in clf_list.items():
                 set_inputs = []
+                if(str(clf[0]) in subprogress_data):
+                    continue
                 if(clf[0] in combinations.keys()):
+                    f = open('partial_progress.csv','w+')
+                    f.close()
                     for combination in range(calculate_combinations(combinations[clf[0]])):                    
                         #print(change_hyperparameters(combinations[clf[0]],combination))
                         #clf[1] = 
+                        if(combination < partial_progress):
+                            continue
                         classifier = clf[0](**change_hyperparameters(combinations[clf[0]],combination))
                         print('Training ',str(clf[0]), 'classifier')
                         classifier.train(d)
@@ -140,6 +178,10 @@ def exec():
                         classifier.test(d)
                         print('Saving results')
                         classifier.save(d)
+                        f = open('partial_progress.csv','a')
+                        f.write(''.join(clf[1]))
+                        f.write('\n')
+                        f.close()
                 else:
                     classifier = clf[0](**clf[1])
                     print('Training ',str(clf[0]), 'classifier')
@@ -148,9 +190,21 @@ def exec():
                     classifier.test(d)
                     print('Saving results')
                     classifier.save(d)
-
+                f = open('sub_progress.csv','a')
+                f.write(str(clf[0]))
+                f.write('\n')
+                f.close()
+            f = open('progress.csv','a')
+            f.write(str(row['Metadata']))
+            f.write('\n')
+            f.close()
+            f = open('sub_progress.csv','w+')
+            f.close()
+            subprogress_data = []
+            partial_progress = 0
+            progress_data = []
 with warnings.catch_warnings():
-    warnings.filterwarnings('ignore')
+    #warnings.filterwarnings('ignore')
     exec()
 #clf = KNN(K=3)
 #clf.train(d)

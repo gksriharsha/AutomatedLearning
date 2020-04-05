@@ -32,7 +32,7 @@ class Dataset(DataFrame):
             with open('dataset_fetch/meta/MetaData.csv','r') as read_obj:
                 csv_dict_reader = DictReader(read_obj)
                 for row in csv_dict_reader:
-                    if(row['Id'] == self.meta_id):
+                    if(row['fID'] == self.meta_id):
                         MetaData_line = row
                         break
                 about_dict['rows'] = int(MetaData_line['NumberOfInstances'])

@@ -24,7 +24,7 @@ class Dat(scrapy.Spider):
 		                         .strip('properties').strip())
 		
 		Metadata = {}
-		Metadata.__setitem__('Id',id)
+		Metadata.__setitem__('fID',id)
 		for i in range(NumberOfProperties):
 			key = response.xpath(f'//*[@id="data_overview"]/div[7]/div[{i+1}]/div[1]/a/text()').extract()[1].strip()
 			print(key)

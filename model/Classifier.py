@@ -19,7 +19,7 @@ class Classifier():
             f = open('results/results.csv','r',newline='')
             f.close()
         except:           
-            row = ['UUID','Dask Used','Classifier','Rows','Columns','Classes','Accuracy','F1 Score','Precision','Recall','time']
+            row = ['fID','eID','Dask Used','Classifier','Rows','Columns','Classes','Accuracy','F1 Score','Precision','Recall','time']
             with open('results/results.csv','w+',newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(row)
@@ -61,8 +61,9 @@ class Classifier():
     def save_results(self,dataset,classifier_model):    
         name = classifier_model.name
         info = dataset()
-        id = dataset.meta_id
-        row = [str(id),str(dataset.use_dask),name,info['rows'],info['columns'],info['Unique classes']]+list(self.results.values())+[self._time]   
+        fid = dataset.meta_id
+        eid = uuid.uuid4()
+        row = [str(fid),str(eid),str(dataset.use_dask),name,info['rows'],info['columns'],info['Unique classes']]+list(self.results.values())+[self._time]   
         with open('results/results.csv','a',newline='') as file:
             writer = csv.writer(file)
             writer.writerow(row)
@@ -72,11 +73,11 @@ class Classifier():
                 pass
             with open(f'results/{name}.csv','a',newline='') as file:
                 writer = csv.writer(file)
-                row = [id]+list(classifier_model.hyperparameters.values())
+                row = [fid,eid]+list(classifier_model.hyperparameters.values())
                 writer.writerow(row)
         except:
             with open(f'results/{name}.csv','w',newline='') as file:
                 writer = csv.writer(file)   
-                row = ['UUID']+list(classifier_model.hyperparameters.keys())             
+                row = ['fID','eID']+list(classifier_model.hyperparameters.keys())             
                 writer.writerow(row)
-                writer.writerow([id]+list(classifier_model.hyperparameters.values()))
+                writer.writerow([fid,eid]+list(classifier_model.hyperparameters.values()))

@@ -317,9 +317,18 @@ class Dataset(DataFrame):
                         MetaData_line = row
                         break
                 #Column_info = MetaData_line['FeatureType'].split(',')
-                self.data = pd.get_dummies(self.data)
-                le = preprocessing.LabelEncoder()
-                self.labels = le.fit_transform(self.labels)
+                if(not(self.use_dask)):
+                    self.data = pd.get_dummies(self.data)
+                    le = preprocessing.LabelEncoder()
+                    self.labels = le.fit_transform(self.labels)
+                else:
+                    from dask_ml.preprocessing import OneHotEncoder
+                    enc = OneHotEncoder()
+                    self.labels = enc.fit_transform(self.data)
+                    from dask_ml.preprocessing import LabelEncoder
+                    le = LabelEncoder()
+                    self.labels = le.fit_transform(self.labels)
+
                 #print(len(self.labels))
 if(__name__ == '__main__'):
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\kc2 (1).csv')

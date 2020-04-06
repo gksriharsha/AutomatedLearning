@@ -95,11 +95,12 @@ def exec():
                 d = Dataset(url_path = Meta_data['csv_url'],meta_id =Meta_data['Metadata'])
             except ValueError:
                 file_path = download_csv(Meta_data['csv_url'])
-                d = Dataset(path = file_path,meta_id = Meta_data['Metadata'])
-            if(d.contains_text_check()):
-                d.encode()
+                d = Dataset(path = file_path,meta_id = Meta_data['Metadata'])            
             if(d()['Contains NANs'] == 'Yes'):
                 d._impute_data(imputation_method = 'KNN')
+            if(d.contains_text_check()):
+                if(not d.encode()):
+                    continue
             d.split()
             clf_list = {
                 KNN:

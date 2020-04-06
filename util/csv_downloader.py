@@ -15,6 +15,7 @@ def download_csv(link):
             cr = csv.reader(decoded_content.splitlines(), delimiter=',')
             my_list = list(cr)
             for row in my_list:
-                cw.writerow(row)
+                if any(row):
+                    cw.writerow(row)
             
     return os.path.abspath(f'datasets/{id}.csv')

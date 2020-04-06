@@ -160,7 +160,7 @@ class Dataset(DataFrame):
                 print('Only CSV files are supported')
             else:
                 file_size = os.stat(path).st_size/(1024*1024)
-                if(file_size < 3):
+                if(file_size < 30):
                     dataset = pd.read_csv(path,na_values=['?',"?",'-',"-",'_',"_",'\'?\'','\"?\"'])
                     if(not(self.meta_id == None)):
                         MetaData_line = {}
@@ -210,7 +210,7 @@ class Dataset(DataFrame):
             else:
                 downloaded_csv = dd.read_csv(url_path,na_values=['?',"?",'-',"-",'_',"_",'\'?\'','\"?\"'])
                 file_size = downloaded_csv.memory_usage().sum().compute()/(1024*1024)
-                if(file_size < 3):
+                if(file_size < 30):
                     dataset = downloaded_csv.compute()
                     if(not(self.meta_id == None)):
                         MetaData_line = {}
@@ -322,12 +322,17 @@ class Dataset(DataFrame):
                     le = preprocessing.LabelEncoder()
                     self.labels = le.fit_transform(self.labels)
                 else:
-                    from dask_ml.preprocessing import OneHotEncoder
-                    enc = OneHotEncoder()
-                    self.labels = enc.fit_transform(self.data)
-                    from dask_ml.preprocessing import LabelEncoder
-                    le = LabelEncoder()
-                    self.labels = le.fit_transform(self.labels)
+                    try:
+                        from dask_ml.preprocessing import Categorizer
+                        from dask_ml.preprocessing import OneHotEncoder
+                        ce = Categorizer()
+                        ohe =  OneHotEncoder()
+                        self.data = ohe.fit_transform(ce.fit_transform(self.data))
+                        from dask_ml.preprocessing import LabelEncoder
+                        le = LabelEncoder()
+                        self.labels = le.fit_transform(self.labels)
+                    except:
+                        return False
 
                 #print(len(self.labels))
 if(__name__ == '__main__'):

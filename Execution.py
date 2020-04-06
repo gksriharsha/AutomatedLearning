@@ -15,6 +15,7 @@ from process.classification.SVM_classifier import SVM
 from process.classification.Adaboost_classifier import ABC
 import warnings
 import itertools
+import os
 #warnings.filterwarnings("ignore")
 def fetch_check():
     pass
@@ -74,7 +75,7 @@ def exec():
         f = open('partial_progress.csv','w+')
         f.close()
 
-    #fetch(100)
+    fetch(2000)
     Meta_data = {}
     i = 0
     with open('dataset_fetch/meta/Data.csv') as f:
@@ -86,7 +87,7 @@ def exec():
 
             print(row['Metadata']+'  '+ str(i))
             
-            if i >=5:
+            if i >=50:
                 break
             else:
                 i = i + 1  
@@ -99,7 +100,8 @@ def exec():
             if(d()['Contains NANs'] == 'Yes'):
                 d._impute_data(imputation_method = 'KNN')
             if(d.contains_text_check()):
-                if(not d.encode()):
+                ret_type = d.encode()
+                if(ret_type == False):
                     continue
             d.split()
             clf_list = {
@@ -138,23 +140,23 @@ def exec():
             combinations = {
                 KNN:
                 {
-                    'K':list(range(3,21,2)),
+                    'K':list(range(3,43,4)),
                     'weights':['uniform','distance']
                 },
                 MLP:
                 {
                     #'Solver':['lbfgs','adam'],
                     #'Max_Iterations':10000,
-                    #'Tolerance':[1e-4,1e-3],
+                    'Tolerance':[1e-4,1e-3],
                     'Activation fn': ['tanh','relu'],
-                    #'Hidden layer neurons':[[100],[200],[500],[1000],[100,20]]
+                    'Hidden layer neurons':[[100],[200],[500],[1000],[100,20]]
                 },
                 SVM:
                 {
                     'C':list(range(1,50,10)),
-                    #'Kernel':['rbf','linear'],
-                    #'Degree':list(range(3,9)),
-                    #'Tolerance':[1e-4,1e-3]
+                    'Kernel':['rbf','linear'],
+                    'Degree':list(range(3,9)),
+                    'Tolerance':[1e-4,1e-3]
                 },
                 RF:
                 {
@@ -174,25 +176,31 @@ def exec():
                         #clf[1] = 
                         if(combination < partial_progress):
                             continue
-                        classifier = clf[0](**change_hyperparameters(combinations[clf[0]],combination))
+                        try:
+                            classifier = clf[0](**change_hyperparameters(combinations[clf[0]],combination))
+                            print('Training ',str(clf[0]), 'classifier')
+                            classifier.train(d)
+                            print('Testing ',str(clf[0]), ' classifier')
+                            classifier.test(d)
+                            print('Saving results')
+                            classifier.save(d)
+                            f = open('partial_progress.csv','a')
+                            f.write(''.join(clf[1]))
+                            f.write('\n')
+                            f.close()
+                        except:
+                            pass
+                else:
+                    try:
+                        classifier = clf[0](**clf[1])
                         print('Training ',str(clf[0]), 'classifier')
                         classifier.train(d)
                         print('Testing ',str(clf[0]), ' classifier')
                         classifier.test(d)
                         print('Saving results')
                         classifier.save(d)
-                        f = open('partial_progress.csv','a')
-                        f.write(''.join(clf[1]))
-                        f.write('\n')
-                        f.close()
-                else:
-                    classifier = clf[0](**clf[1])
-                    print('Training ',str(clf[0]), 'classifier')
-                    classifier.train(d)
-                    print('Testing ',str(clf[0]), ' classifier')
-                    classifier.test(d)
-                    print('Saving results')
-                    classifier.save(d)
+                    except:
+                        pass
                 f = open('sub_progress.csv','a')
                 f.write(str(clf[0]))
                 f.write('\n')
@@ -206,8 +214,9 @@ def exec():
             subprogress_data = []
             partial_progress = 0
             progress_data = []
+            os.system()
 with warnings.catch_warnings():
-    #warnings.filterwarnings('ignore')
+    warnings.filterwarnings('ignore')
     exec()
 #clf = KNN(K=3)
 #clf.train(d)

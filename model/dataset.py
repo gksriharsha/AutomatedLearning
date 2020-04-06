@@ -267,12 +267,12 @@ class Dataset(DataFrame):
         dataset = self.data
         textcolumns = dataset.applymap(np.isreal)
         if(self.use_dask):
-            if(textcolumns.compute().sum().sum() > 0 ):
+            if(textcolumns.compute().sum().sum() != dataset.shape[0]*dataset.shape[1] ):
                 return True
             else:
                 return False
         else:
-            if(textcolumns.sum().sum() > 0 ):
+            if(textcolumns.sum().sum() != dataset.shape[0]*dataset.shape[1] ):
                 return True
             else:
                 return False

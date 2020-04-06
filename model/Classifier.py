@@ -1,4 +1,4 @@
-from ttictoc import TicToc
+from ttictoc import tic,toc
 from sklearn.neighbors import KNeighborsClassifier  
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
@@ -28,11 +28,9 @@ class Classifier():
         def __call__(self,function):        
             def timer(*args,**kwargs):
                 global _time
-                t = TicToc()
-                t.tic()
+                tic()
                 function(self,*args,**kwargs)
-                t.toc()
-                _time = t.elapsed
+                _time = toc()
             return timer
     
 
@@ -51,12 +49,10 @@ class Classifier():
     
     #@time_watch()
     def train(self,dataset,model):
-        t = TicToc()
         self.clf = model
-        t.tic()
+        tic()
         self.clf.fit(dataset.X_train,dataset.y_train)
-        t.toc()
-        self._time = t.elapsed
+        self._time = toc()
 
     def save_results(self,dataset,classifier_model):    
         name = classifier_model.name

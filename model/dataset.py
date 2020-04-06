@@ -9,7 +9,7 @@ from random import randint
 from sklearn.neighbors import KNeighborsClassifier  
 from sklearn.impute import KNNImputer
 from csv import DictReader
-from ttictoc import TicToc
+from ttictoc import tic,toc
 from sklearn import preprocessing
 class Dataset(DataFrame):
 
@@ -316,10 +316,10 @@ if(__name__ == '__main__'):
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\kc2 (1).csv')
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\hill.csv')
     t = TicToc()
-    t.tic()
+    tic()
     dataset = Dataset(url_path=r'https://www.openml.org/data/get_csv/31/dataset_31_credit-g.arff',meta_id ='c3d0a210-6f55-4b89-8a38-6e3404653c78')
-    t.toc()
-    print(t.elapsed)
+    elapsed = toc()
+    print(elapsed)
     #dataset = Dataset(url_path=r'https://www.openml.org/data/get_csv/31/dataset_31_credit-g.arff')
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\arrhythmia.csv')
     #print(dataset())

@@ -38,7 +38,7 @@ class Dataset(DataFrame):
                 about_dict['rows'] = int(MetaData_line['NumberOfInstances'])
                 about_dict['columns'] = int(MetaData_line['NumberOfFeatures'])
                 about_dict['Unique classes'] = int(MetaData_line['NumberOfClasses'])
-                about_dict['Contains NANs'] = int(MetaData_line['NumberOfMissingValues'])
+                about_dict['Contains NANs'] = 'Yes' if int(MetaData_line['NumberOfMissingValues']) != 0 else 'No'
                 about_dict['elements'] = int(MetaData_line['NumberOfInstances'])*int(MetaData_line['NumberOfFeatures'])
 
         else:
@@ -64,6 +64,7 @@ class Dataset(DataFrame):
                     about_dict['columns'] = self.data.shape[1]
                     about_dict['Unique classes'] = len(np.unique(self.labels))
                     about_dict['elements'] = self.data.shape[0]*self.data.shape[1]
+                    about_dict['Contains NANs'] = 'Yes' if self.data.isnull().sum().sum() != 0 else 'No'
                 except AttributeError:
                     shape1 = self.X_train.shape
                     shape2 = self.X_test.shape
@@ -71,6 +72,7 @@ class Dataset(DataFrame):
                     about_dict['columns'] = shape1[1]+shape2[1]
                     about_dict['elements'] = self.data.shape[0]*self.data.shape[1]
                     about_dict['Unique classes'] = len(self.y_train.unique())
+                    about_dict['Contains NANs'] = 'Yes' if (self.X_train.isnull().sum().sum() != 0) or (self.X_test.isnull().sum().sum() != 0) else 'No'
         return about_dict
 
     def _check_for_classification(self):
@@ -264,10 +266,17 @@ class Dataset(DataFrame):
     def contains_text_check(self):
         dataset = self.data
         textcolumns = dataset.applymap(np.isreal)
-        if(textcolumns.sum().sum() > 0 ):
-            return True
+        if(self.use_dask):
+            if(textcolumns.compute().sum().sum() > 0 ):
+                return True
+            else:
+                return False
         else:
-            return False
+            if(textcolumns.sum().sum() > 0 ):
+                return True
+            else:
+                return False
+        
 
     def _scale_data(self):
         if(not self._scaled):
@@ -315,7 +324,6 @@ class Dataset(DataFrame):
 if(__name__ == '__main__'):
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\kc2 (1).csv')
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\hill.csv')
-    t = TicToc()
     tic()
     dataset = Dataset(url_path=r'https://www.openml.org/data/get_csv/31/dataset_31_credit-g.arff',meta_id ='c3d0a210-6f55-4b89-8a38-6e3404653c78')
     elapsed = toc()

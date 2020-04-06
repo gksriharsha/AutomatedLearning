@@ -98,6 +98,8 @@ def exec():
                 d = Dataset(path = file_path,meta_id = Meta_data['Metadata'])
             if(d.contains_text_check()):
                 d.encode()
+            if(d()['Contains NANs'] == 'Yes'):
+                d._impute_data(imputation_method = 'KNN')
             d.split()
             clf_list = {
                 KNN:

@@ -214,7 +214,7 @@ def exec():
             subprogress_data = []
             partial_progress = 0
             progress_data = []
-            os.system()
+            os.system('aws s3 cp -r AutomatedLearning s3://amlprojectbucket/project')
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore')
     exec()

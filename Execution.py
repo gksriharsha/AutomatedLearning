@@ -87,7 +87,7 @@ def exec():
         f = open('partial_progress.csv','w+')
         f.close()
 
-    #fetch(2000)
+    fetch(2000)
     Meta_data = {}
     i = 0
     with open('dataset_fetch/meta/Data.csv') as f:
@@ -140,7 +140,7 @@ def exec():
                         'Max_Iterations':10000,
                         'Tolerance':1e-4,
                         'Activation fn': 'tanh',
-                        'Hidden layer neurons':[100]
+                        'Hidden_layer_neurons':[100]
                     },
                     SVM:
                     {

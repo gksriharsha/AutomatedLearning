@@ -18,12 +18,16 @@ class Classifier():
         try:
             f = open('results/results.csv','r',newline='')
             f.close()
+            
         except:           
-            row = ['fID','eID','Dask Used','Classifier','Rows','Columns','Classes','Accuracy','F1 Score','Precision','Recall','time']
+            row = ['fID','eID','Dask Used',"Preprocessing Technique",'Classifier','Rows','Columns','Classes','Accuracy','F1 Score','Precision','Recall','time']
             with open('results/results.csv','w+',newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(row)
-    
+            
+            
+        
+
     class time_watch(object):
         def __call__(self,function):        
             def timer(*args,**kwargs):
@@ -59,10 +63,24 @@ class Classifier():
         info = dataset()
         fid = dataset.meta_id
         eid = uuid.uuid4()
-        row = [str(fid),str(eid),str(dataset.use_dask),name,info['rows'],info['columns'],info['Unique classes']]+list(self.results.values())+[self._time]   
+        row = [str(fid),str(eid),str(dataset.use_dask),dataset.preprocessing,name,info['rows'],info['columns'],info['Unique classes']]+list(self.results.values())+[self._time]   
         with open('results/results.csv','a',newline='') as file:
             writer = csv.writer(file)
             writer.writerow(row)
+        if(not dataset.preprocessing == 'None'):
+            try:
+                with open(f'results/{dataset.preprocessing}.csv','r',newline='') as fi:
+                    pass
+                with open(f'results/{dataset.preprocessing}.csv','a',newline='') as fi:
+                    writer = csv.writer(fi)
+                    row = [str(eid)]+list(dataset.preprocess_meta.values())
+                    writer.writerow(row)
+            except:
+                with open(f'results/{dataset.preprocessing}.csv','w',newline='') as file:
+                    writer = csv.writer(file)
+                    row = ['eID']+list(dataset.preprocess_meta.keys())             
+                    writer.writerow(row)
+                    writer.writerow([eid]+list(dataset.preprocess_meta.values()))
         
         try:            
             with open(f'results/{name}.csv','r',newline='') as file:
@@ -71,6 +89,7 @@ class Classifier():
                 writer = csv.writer(file)
                 row = [fid,eid]+list(classifier_model.hyperparameters.values())
                 writer.writerow(row)
+        
         except:
             with open(f'results/{name}.csv','w',newline='') as file:
                 writer = csv.writer(file)   

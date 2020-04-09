@@ -11,6 +11,7 @@ from sklearn.impute import KNNImputer
 from csv import DictReader
 from ttictoc import tic,toc
 from sklearn import preprocessing
+from process.Algorithms import PCA,rsfs_py
 class Dataset(DataFrame):
 
     def __init__(self, task='Supervised_Classification', data=None, labels=None, *args, **kwargs):
@@ -26,6 +27,7 @@ class Dataset(DataFrame):
 
     def __call__(self):
         about_dict = {}
+        about_dict['preprocessing'] = self.preprocessing
         about_dict['Using Dask'] = 'Yes' if self.use_dask else 'No'
         if(not(self.meta_id == None)):
             MetaData_line = {}
@@ -154,7 +156,8 @@ class Dataset(DataFrame):
         self.meta_id = meta_id
         self.possible_label_headers = ['classes', 'class',
                               'labels', 'label', 'output', 'problems']
-
+        self.preprocessing = 'None'
+        self.preprocess_meta = 'None'
         if (not (path == None)):
             if ('.csv' not in path):
                 print('Only CSV files are supported')
@@ -171,7 +174,7 @@ class Dataset(DataFrame):
                                     MetaData_line = row
                                     break
                         Labels_name = MetaData_line['Label_header'].strip()
-                        self.labels = dataset.loc[:,Labels_name]
+                        self.labels = preprocessing.LabelEncoder().fit_transform(dataset.loc[:,Labels_name])
                         dataset = dataset.drop(columns = Labels_name,axis=1)
                         self.data = dataset
                         self.meta_id = meta_id
@@ -180,7 +183,7 @@ class Dataset(DataFrame):
                         if(any(i in names for i in self.possible_label_headers)):
                             label_header = list(set(names).intersection(set(self.possible_label_headers)))
                             if(len(label_header) == 1):                 
-                                self.labels = dataset.loc[:,list(map(lambda x:True if x.lower() == label_header[0] else False,dataset.columns))]
+                                self.labels = preprocessing.LabelEncoder().fit_transform(dataset.loc[:,list(map(lambda x:True if x.lower() == label_header[0] else False,dataset.columns))])
                                 dataset.drop(label_header[0],axis=1)
                                 self.data = dataset
                                 self.data = self.data.apply(pd.to_numeric,axis=1, args=('coerce',))
@@ -221,7 +224,7 @@ class Dataset(DataFrame):
                                     MetaData_line = row
                                     break
                         Labels_name = MetaData_line['Label_header'].strip()
-                        self.labels = dataset.loc[:,Labels_name]
+                        self.labels = preprocessing.LabelEncoder().fit_transform(dataset.loc[:,Labels_name])
                         dataset = dataset.drop(columns = Labels_name,axis=1)
                         self.data = dataset
                         self.meta_id = meta_id
@@ -230,7 +233,7 @@ class Dataset(DataFrame):
                         if(any(i in names for i in self.possible_label_headers)):
                             label_header = list(set(names).intersection(set(self.possible_label_headers)))
                             if(len(label_header) == 1):                 
-                                self.labels = dataset.loc[:,list(map(lambda x:True if x.lower() == label_header[0] else False,dataset.columns))]
+                                self.labels = preprocessing.LabelEncoder().fit_transform(dataset.loc[:,list(map(lambda x:True if x.lower() == label_header[0] else False,dataset.columns))])
                                 dataset.drop(label_header[0],axis=1)
                                 self.data = dataset
                                 #self.data = self.data.apply(pd.to_numeric,axis=1, args=('coerce',),meta = self.data.dtypes)
@@ -335,6 +338,22 @@ class Dataset(DataFrame):
                         return False
 
                 #print(len(self.labels))
+
+    def preprocess_data(self,process,**dictionary):
+        self._scale_data()
+        self.split()
+        
+        if(process =='PCA'):
+            self.preprocessing = 'PCA' 
+            PCA.perform_pca(self,dictionary)
+        if(process == 'RSFS'):            
+            self.preprocessing = 'RSFS' 
+            rsfs_py.RSFS(self,dictionary)
+        
+        dictionary['Final No. Features'] = self.X_train.shape[1]
+        self.preprocess_meta = dictionary
+
+
 if(__name__ == '__main__'):
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\kc2 (1).csv')
     #dataset = Dataset(path=r'C:\Users\806707\Downloads\hill.csv')

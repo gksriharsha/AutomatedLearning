@@ -47,10 +47,20 @@ class Classifier():
         pred = self.clf.predict(dataset.X_test)
         self.results = {}
         self.results['accuracy'] = accuracy_score(dataset.y_test,pred)
-        self.results['f1_score'] = f1_score(dataset.y_test,pred)
-        self.results['precision'] = precision_score(dataset.y_test,pred)
-        self.results['recall'] = recall_score(dataset.y_test,pred)
-    
+        if(len(set(dataset.y_train)) > 2):        
+            self.results['f1_score_micro'] = f1_score(dataset.y_test,pred,average='micro')
+            self.results['precision_micro'] = precision_score(dataset.y_test,pred,average='micro')
+            self.results['recall_micro'] = recall_score(dataset.y_test,pred,average='micro')
+            self.results['f1_score_macro'] = f1_score(dataset.y_test,pred,average='macro')
+            self.results['precision_macro'] = precision_score(dataset.y_test,pred,average='macro')
+            self.results['recall_macro'] = recall_score(dataset.y_test,pred,average='macro')
+        else:
+            self.results['f1_score_micro'] = f1_score(dataset.y_test,pred)
+            self.results['precision_micro'] = precision_score(dataset.y_test,pred)
+            self.results['recall_micro'] = recall_score(dataset.y_test,pred)
+            self.results['f1_score_macro'] = f1_score(dataset.y_test,pred)
+            self.results['precision_macro'] = precision_score(dataset.y_test,pred)
+            self.results['recall_macro'] = recall_score(dataset.y_test,pred)
     #@time_watch()
     def train(self,dataset,model):
         self.clf = model

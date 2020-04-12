@@ -10,32 +10,32 @@ class dataset_spider(scrapy.Spider):
 	
 	start_urls = [
 		'https://www.openml.org/search?type=data&from=0',
-		'https://www.openml.org/search?type=data&from=100',
-		'https://www.openml.org/search?type=data&from=200',
-		'https://www.openml.org/search?type=data&from=300',
-		'https://www.openml.org/search?type=data&from=400',
-		'https://www.openml.org/search?type=data&from=500',
-		'https://www.openml.org/search?type=data&from=600',
-		'https://www.openml.org/search?type=data&from=700',
-		'https://www.openml.org/search?type=data&from=800',
-		'https://www.openml.org/search?type=data&from=900',
-		'https://www.openml.org/search?type=data&from=1000',
-		'https://www.openml.org/search?type=data&from=1100',
-		'https://www.openml.org/search?type=data&from=1200',
-		'https://www.openml.org/search?type=data&from=1300',
-		'https://www.openml.org/search?type=data&from=1400',
-		'https://www.openml.org/search?type=data&from=1500',
-		'https://www.openml.org/search?type=data&from=2100',
-		'https://www.openml.org/search?type=data&from=1600',
-		'https://www.openml.org/search?type=data&from=1700',
-		'https://www.openml.org/search?type=data&from=1800',
-		'https://www.openml.org/search?type=data&from=1900',
-		'https://www.openml.org/search?type=data&from=2000',
-		'https://www.openml.org/search?type=data&from=2200',
+		# 'https://www.openml.org/search?type=data&from=100',
+		# 'https://www.openml.org/search?type=data&from=200',
+		# 'https://www.openml.org/search?type=data&from=300',
+		# 'https://www.openml.org/search?type=data&from=400',
+		# 'https://www.openml.org/search?type=data&from=500',
+		# 'https://www.openml.org/search?type=data&from=600',
+		# 'https://www.openml.org/search?type=data&from=700',
+		# 'https://www.openml.org/search?type=data&from=800',
+		# 'https://www.openml.org/search?type=data&from=900',
+		# 'https://www.openml.org/search?type=data&from=1000',
+		# 'https://www.openml.org/search?type=data&from=1100',
+		# 'https://www.openml.org/search?type=data&from=1200',
+		# 'https://www.openml.org/search?type=data&from=1300',
+		# 'https://www.openml.org/search?type=data&from=1400',
+		# 'https://www.openml.org/search?type=data&from=1500',
+		# 'https://www.openml.org/search?type=data&from=2100',
+		# 'https://www.openml.org/search?type=data&from=1600',
+		# 'https://www.openml.org/search?type=data&from=1700',
+		# 'https://www.openml.org/search?type=data&from=1800',
+		# 'https://www.openml.org/search?type=data&from=1900',
+		# 'https://www.openml.org/search?type=data&from=2000',
+		# 'https://www.openml.org/search?type=data&from=2200',
 	]
 	
 	def __init__(self,datasets):
-		self.total_Datasets = 2000
+		self.total_Datasets = 100
 		self.Datasets = 100
 	
 	def parse(self, response):

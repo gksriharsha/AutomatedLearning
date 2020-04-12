@@ -17,7 +17,7 @@ class Dataset(DataFrame):
     def __init__(self, task='Supervised_Classification', data=None, labels=None, *args, **kwargs):
         if(task == 'Supervised_Classification'):
             self._supervised_classification_init(data, labels, *args, **kwargs)
-            self.task = task
+            #self.task = task
         else:
             print('Task not found')
 
@@ -77,37 +77,37 @@ class Dataset(DataFrame):
                     about_dict['Contains NANs'] = 'Yes' if (self.X_train.isnull().sum().sum() != 0) or (self.X_test.isnull().sum().sum() != 0) else 'No'
         return about_dict
 
-    def _check_for_classification(self):
-        self.preprocesses = []
-        def check_nans(self):
-            if(self.use_dask):
-                try:
-                    if(Dataset.no_of_nans(self.data.compute()) != 0):   
-                        self.preprocesses.append('NANs')                
-                except AttributeError:
-                    if(Dataset.no_of_nans(self.X_train.compute() != 0)):
-                        self.preprocesses.append('NANs')
-            else:
-                try:
-                    if(Dataset.no_of_nans(self.data) != 0):   
-                        self.preprocesses.append('NANs')                
-                except AttributeError:
-                    if(Dataset.no_of_nans(self.X_train != 0)):
-                        self.preprocesses.append('NANs')
-        def check_numeric_labels(self):
-            try:
-                try:
-                    int(self.labels.iloc[0])
-                except AttributeError:
-                    int(self.y_train.iloc[0])
-            except:
-                self.preprocesses.append('Non-numeric labels')
+    #def _check_for_classification(self):
+    #     self.preprocesses = []
+    #     def check_nans(self):
+    #         if(self.use_dask):
+    #             try:
+    #                 if(Dataset.no_of_nans(self.data.compute()) != 0):   
+    #                     self.preprocesses.append('NANs')                
+    #             except AttributeError:
+    #                 if(Dataset.no_of_nans(self.X_train.compute() != 0)):
+    #                     self.preprocesses.append('NANs')
+    #         else:
+    #             try:
+    #                 if(Dataset.no_of_nans(self.data) != 0):   
+    #                     self.preprocesses.append('NANs')                
+    #             except AttributeError:
+    #                 if(Dataset.no_of_nans(self.X_train != 0)):
+    #                     self.preprocesses.append('NANs')
+    #     def check_numeric_labels(self):
+    #         try:
+    #             try:
+    #                 int(self.labels.iloc[0])
+    #             except AttributeError:
+    #                 int(self.y_train.iloc[0])
+    #         except:
+    #             self.preprocesses.append('Non-numeric labels')
 
-        check_nans(self)
-        check_numeric_labels(self)
-        if(self.preprocesses == []):
-            self.preprocesses.append('All clear')
-        return self.preprocesses
+    #     check_nans(self)
+    #     check_numeric_labels(self)
+    #     if(self.preprocesses == []):
+    #         self.preprocesses.append('All clear')
+    #     return self.preprocesses
 
     def _supervised_dask_init(self):
         if(self.path):
@@ -281,6 +281,22 @@ class Dataset(DataFrame):
                 return False
         
 
+    def get_size(self):
+        if(self.use_dask):
+            with open('dataset_fetch/meta/MetaData.csv','r') as read_obj:
+                csv_reader = DictReader(read_obj)
+                for row in csv_reader:
+                    if(row['fID'] == self.meta_id):
+                        rows = row['NumberOfInstances']
+                        cols = row['NumberOfFeatures']
+                        break
+                return (rows,cols)
+        else:
+            if(self._split):
+                return tuple(self.X_train.shape[0] + self.X_test.shape[0] ,self.X_train.shape[1])
+            else:
+                return self.data.shape
+
     def _scale_data(self):
         if(not self._scaled):
             self._scale = True
@@ -288,27 +304,50 @@ class Dataset(DataFrame):
             self.data = scaler.fit_transform(self.data)
 
     def _impute_data(self,**params):
-        self.imputation_method = params.pop('imputation_method')
-        full_dataset = pd.concat([self.data,self.labels],axis=1)
-        def remove_nan_columns(self):
-            #nan_indices = np.argwhere(full_dataset.isnull().values>0)
-            nan_values = np.array(full_dataset.isnull().sum(axis=0))
-            column_numbers = list(np.where(nan_values>0)[0])
-            for i in column_numbers:
-                if(nan_values[i]*100/full_dataset.shape[0] >= 50):
-                    full_dataset.drop(full_dataset.columns[[i]],axis=1,inplace=True)
-            self.labels = full_dataset.iloc[:,-1]
-            self.data = full_dataset.iloc[:,:-1]
-        remove_nan_columns(self)
-        self.imputed_columns = self.data.columns[self.data.isnull().any()].tolist()
-        self.nan_indices = np.argwhere(self.data.isnull().values>0)
-        if(self.imputation_method == 'mean'):            
-            self.data =  self.data.fillna( self.data.mean())
-        elif(self.imputation_method == 'median'):
-            self.data =  self.data.fillna( self.data.median())
-        elif(self.imputation_method == 'KNN'):
-            imputer = KNNImputer(n_neighbors=2, weights="uniform")
-            self.data = imputer.fit_transform(self.data)
+        if(self.use_dask):
+            self.imputation_method = params.pop('imputation_method')
+            full_dataset = dd.concat([self.data,self.labels],axis=1)
+            def remove_nan_columns(self):
+                #nan_indices = np.argwhere(full_dataset.isnull().values>0)
+                nan_values = np.array(full_dataset.isnull().sum(axis=0).compute())
+                column_numbers = list(np.where(nan_values>0)[0])
+                for i in column_numbers:
+                    if(nan_values[i]*100/full_dataset.shape[0] >= 50):
+                        full_dataset.drop(full_dataset.columns[[i]],axis=1,inplace=True)
+                self.labels = full_dataset.iloc[:,-1]
+                self.data = full_dataset.iloc[:,:-1]
+            remove_nan_columns(self)
+            self.imputed_columns = self.data.columns[self.data.isnull().any()].tolist()
+            self.nan_indices = np.argwhere(self.data.isnull().values>0)
+            if(self.imputation_method == 'mean'):            
+                self.data =  self.data.fillna( self.data.mean())
+            elif(self.imputation_method == 'median'):
+                self.data =  self.data.fillna( self.data.median())
+            elif(self.imputation_method == 'KNN'):
+                imputer = KNNImputer(n_neighbors=2, weights="uniform")
+                self.data = imputer.fit_transform(self.data)
+        else:
+            self.imputation_method = params.pop('imputation_method')
+            full_dataset = pd.concat([self.data,self.labels],axis=1)
+            def remove_nan_columns(self):
+                #nan_indices = np.argwhere(full_dataset.isnull().values>0)
+                nan_values = np.array(full_dataset.isnull().sum(axis=0))
+                column_numbers = list(np.where(nan_values>0)[0])
+                for i in column_numbers:
+                    if(nan_values[i]*100/full_dataset.shape[0] >= 50):
+                        full_dataset.drop(full_dataset.columns[[i]],axis=1,inplace=True)
+                self.labels = full_dataset.iloc[:,-1]
+                self.data = full_dataset.iloc[:,:-1]
+            remove_nan_columns(self)
+            self.imputed_columns = self.data.columns[self.data.isnull().any()].tolist()
+            self.nan_indices = np.argwhere(self.data.isnull().values>0)
+            if(self.imputation_method == 'mean'):            
+                self.data =  self.data.fillna( self.data.mean())
+            elif(self.imputation_method == 'median'):
+                self.data =  self.data.fillna( self.data.median())
+            elif(self.imputation_method == 'KNN'):
+                imputer = KNNImputer(n_neighbors=2, weights="uniform")
+                self.data = imputer.fit_transform(self.data)
 
     def encode(self):
         if(not(self.meta_id == None)):

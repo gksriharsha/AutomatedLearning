@@ -6,6 +6,8 @@ sys.path.append(r'V:\Python\AutomatedLearning')
 from util.csv_downloader import  download_csv
 from dataset_fetch.Openml_fetch import fetch
 from model.dataset import Dataset
+import concurrent.futures
+import multiprocessing
 from process.classification.KNN_classifier import KNN
 from process.classification.MLP_classifier import MLP
 from process.classification.GNB_classifier import GNB
@@ -86,8 +88,9 @@ def exec():
     except:
         f = open('partial_progress.csv','w+')
         f.close()
-
-    fetch(2000)
+    ###############################################################################################
+    #fetch(2000)
+    ###############################################################################################
     Meta_data = {}
     i = 0
     with open('dataset_fetch/meta/Data.csv') as f:
@@ -125,6 +128,7 @@ def exec():
                 for line in Reader2:
                     if(line['fID'] == row['Metadata']):
                         NumberOfCols = line['NumberOfFeatures']
+                        break
             def classification_block(d):
                 global set_inputs
                 clf_list = {
@@ -189,10 +193,10 @@ def exec():
                         #'max_depth':None
                     }
                 }
-                for clf in clf_list.items():
+                def core_classification(clf):
                     set_inputs = []
-                    if(str(clf[0]) in subprogress_data):
-                        continue
+                    # if(str(clf[0]) in subprogress_data):
+                    #     continue
                     if(clf[0] in combinations.keys()):
                         f = open('partial_progress.csv','w+')
                         f.close()
@@ -213,8 +217,8 @@ def exec():
                                 f.write(''.join(clf[1]))
                                 f.write('\n')
                                 f.close()
-                            except:
-                                pass
+                            except Exception as e:
+                                print(e)
                     else:
                         try:
                             classifier = clf[0](**clf[1])
@@ -224,12 +228,23 @@ def exec():
                             classifier.test(d)
                             print('Saving results')
                             classifier.save(d)
-                        except:
-                            pass
+                        except Exception as e:
+                            print(e)
                     f = open('sub_progress.csv','a')
                     f.write(str(clf[0]))
                     f.write('\n')
                     f.close()
+                if __name__ == '__main__':
+                    # with concurrent.futures.ProcessPoolExecutor() as executor:
+                    #     executor.map(core_classification,list(clf_list.items()))
+                    processes = []
+                    for clf in clf_list.items():
+                        p = multiprocessing.Process(target=core_classification,args=clf)
+                        p.start()
+                        processes.append(p)
+                    
+                    for process in processes:
+                        process.join()
             if(int(NumberOfCols) < 1000):
                 d.split()
                 classification_block(d)            
